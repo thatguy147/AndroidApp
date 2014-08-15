@@ -13,7 +13,9 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.os.Handler;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.view.View;
@@ -29,11 +31,18 @@ public class Server extends Activity {
 	Thread serverThread = null;
 
 	private TextView text;
-	private Button sendMessage;
+	private Button sendCANMsgbtn;
+	private Button addCANIDbtn;
+	private Button remCANIDbtn;
+	private Button configModebtn;
+	
+	private EditText canIDTextField;
 	
 	private BufferedReader input;
 	private PrintWriter output;
 	private int messageCount = 10;
+	
+	private boolean _configMode = false;
 	
 	public static final int SERVERPORT = 6001;
 
@@ -46,7 +55,12 @@ public class Server extends Activity {
 		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
 		text = (TextView) findViewById(R.id.text2);
-		addListenerOnButton();
+		canIDTextField = (EditText)findViewById(R.id.CANIDInput);
+		//addListenerOnButton();
+		addListenerToAddCANIDbtn();
+		addListenerToRemCANIDbtn();
+		addListenerToConfigModebtn();
+		addListenerToSendCANMsgbtn();
 
 		updateConversationHandler = new Handler();
 		sendAMessage = new Handler();
@@ -56,17 +70,85 @@ public class Server extends Activity {
 
 	}
 	
-	public void addListenerOnButton() {
+	public void addListenerToAddCANIDbtn(){
+		addCANIDbtn = (Button) findViewById(R.id.AddCANIDbtn);
+		addCANIDbtn.setOnClickListener(new OnClickListener(){
+			@Override
+			public void onClick(View arg0){
+				String canIDText = getCANIDFromTextField();
+				int canIDHexValue = Integer.parseInt(canIDText, 16);
+				String canIDHexToDecString = String.format("%04d", canIDHexValue);
+				String addIDCommand = "{SI"+canIDHexToDecString+"}";
+				output.write(addIDCommand);
+				output.flush();
+			}
+		});
+	}
+	
+	
+	
+	public void addListenerToRemCANIDbtn(){
+		remCANIDbtn = (Button) findViewById(R.id.RemoveIDbtn);
+		remCANIDbtn.setOnClickListener(new OnClickListener(){
+			@Override
+			public void onClick(View arg0){
+				String canIDText = getCANIDFromTextField();
+				int canIDHexValue = Integer.parseInt(canIDText, 16);
+				String canIDHexToDecString = String.format("%04d", canIDHexValue);
+				String remIDCommand = "{RI"+canIDHexToDecString+"}";
+				output.write(remIDCommand);
+				output.flush();
+				//String remIDCommand = "{RIxxx}";
+				
+			}
+		});
+	}
+	
+	public void addListenerToConfigModebtn(){
+		configModebtn = (Button) findViewById(R.id.ConfigModebtn);
+		configModebtn.setOnClickListener(new OnClickListener(){
+			@Override
+			public void onClick(View arg0){
+				String configModeText = "{EC}";
+				output.write(configModeText);
+				output.flush();
+
+			}
+		});
+	}
+	
+	public void addListenerToSendCANMsgbtn(){
+		sendCANMsgbtn = (Button) findViewById(R.id.sendCANMessageBtn);
+		sendCANMsgbtn.setOnClickListener(new OnClickListener(){
+			@Override
+			public void onClick(View arg0){
+				String messageToSend = "[ID 002 "+ messageCount + " FF FF FF FF FF FF FF]";
+				if(output != null){
+ 					output.write(messageToSend);
+ 					output.flush();
+ 				}
+				if(messageCount > 19){
+ 					messageCount = 10;
+ 				}
+			}
+		});
+	}
+	
+	public String getCANIDFromTextField(){
+		return canIDTextField.getText().toString();
+	}
+	
+	/*public void addListenerOnButton() {
 		
-		sendMessage = (Button) findViewById(R.id.button1);
+		sendMessage = (Button) findViewById(R.id.sendCANMessageBtn);
 		sendMessage.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View arg0) {
-				String messageToSend = "[ID 002 "+ messageCount + " FF FF FF FF FF FF FF]";
+				//String messageToSend = "[ID 002 "+ messageCount + " FF FF FF FF FF FF FF]";
+				String messageToSend = "{SI005 }";
  				if(output != null){
  					output.write(messageToSend);
  					output.flush();
- 					
  				}
  				else{
  					
@@ -79,7 +161,7 @@ public class Server extends Activity {
 			}
 				
 		});
-	}
+	}*/
 
 	@Override
 	protected void onStop() {
@@ -188,14 +270,25 @@ public class Server extends Activity {
 
 		@Override
 		public void run() {
-			String currentDateandTime = new SimpleDateFormat("HH:mm:ss").format(new Date());
-			if(text.getText().toString().length() > 900)
-			{
-				text.setText(/*text.getText().toString()+*/"RX: "+ currentDateandTime +" " + msg + "\n");
-			}
-			else{
-				text.setText(text.getText().toString() + "RX: "+ currentDateandTime +" " + msg + "\n");
-			}	
+			
+			
+			//if(msg.charAt(0) == '{'){
+			//	int num = msg.indexOf("}");
+			//Toast.makeText(getApplicationContext(), 
+            //           msg.subSequence(1,num), Toast.LENGTH_LONG).show();
+			//}
+			//else{
+					String currentDateandTime = new SimpleDateFormat("HH:mm:ss").format(new Date());
+					if(text.getText().toString().length() > 900)
+					{
+						text.setText(/*text.getText().toString()+*/"RX: "+ currentDateandTime +" " + msg + "\n");
+					}
+					else{
+					text.setText(text.getText().toString() + "RX: "+ currentDateandTime +" " + msg + "\n");
+					}	
+			//}
+			
+			
 		}
 
 	}
